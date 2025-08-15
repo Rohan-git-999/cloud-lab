@@ -1,0 +1,64 @@
+name: build-and-deploy-aks
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  ACR_NAME: ${{ secrets.ACR_NAME }}
+  AKS_RG:   ${{ secrets.AKS_RG }}
+  AKS_NAME: ${{ secrets.AKS_NAME }}
+  IMAGE_NAME: rohanlab/web
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Azure login (SP)
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Get ACR login server
+      id: acr
+      run: |
+        ACR_SERVER=$(az acr show -n "$ACR_NAME" --query "loginServer" -o tsv)
+        echo "server=$ACR_SERVER" >> $GITHUB_OUTPUT
+
+    - name: Docker login to ACR
+      run: |
+        az acr login -n "$ACR_NAME"
+
+    - name: Build & push image
+      run: |
+        IMAGE="${{ steps.acr.outputs.server }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+        echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+        docker build -t "$IMAGE" ./src
+        docker push "$IMAGE"
+
+    - name: Set AKS context
+      uses: azure/aks-set-context@v4
+      with:
+        resource-group: ${{ env.AKS_RG }}
+        cluster-name:   ${{ env.AKS_NAME }}
+
+    - name: Kustomize image into manifests (simple sed)
+      run: |
+        IMG="${IMAGE}"
+        SRV="${{ steps.acr.outputs.server }}"
+        sed -i "s|REPLACE_WITH_ACR_LOGIN_SERVER|$SRV|g" k8s/deployment.yaml
+
+    - name: Deploy to AKS
+      run: |
+        kubectl apply -f k8s/namespace.yaml
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/service.yaml
+
+    - name: Wait for rollout
+      run: |
+        kubectl -n app rollout status deploy/web --timeout=120s
+        kubectl -n app get svc web -o wide
