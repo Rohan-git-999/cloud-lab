@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: web
-        image: REPLACE_WITH_ACR_LOGIN_SERVER/rohanlab/web:REPLACE_WITH_TAG
+        image: rohanlabacr0my6x.azurecr.io/rohanlab/web:${{ github.sha }}
         ports:
         - containerPort: 8080
         readinessProbe:
