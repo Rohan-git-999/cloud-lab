@@ -1,12 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-   name: web
-   Namespace: app
+  name: web
+  namespace: app
 spec:
   replicas: 2
   selector:
-    matchlabels:
+    matchLabels:
       app: web
   template:
     metadata:
@@ -15,17 +15,18 @@ spec:
     spec:
       containers:
       - name: web
-        image: rohanlabacr0my6x.azurecr.io
+        image: REPLACE_WITH_ACR_LOGIN_SERVER/rohanlab/web:REPLACE_WITH_TAG
         ports:
         - containerPort: 8080
         readinessProbe:
-          httpGet: { path: "/", port: 8080}
+          httpGet:
+            path: /
+            port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
         livenessProbe:
-          httpGet: { path: "/", port: 8080 }
-          initialDelaySeconds: 10
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 15
           periodSeconds: 10
-        resources:
-          requests: { cpu: "100m", memory: "128Mi" }
-          limits:   { cpu: "500m", memory: "512Mi" }
