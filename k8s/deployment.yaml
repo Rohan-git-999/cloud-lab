@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: web
-        image: rohanlabacr0my6x.azurecr.io/rohanlab/web:${{ github.sha }}
+        image: rohanlabacr0my6x.azurecr.io/rohanlab-aks/web:${{ github.sha }}
         ports:
         - containerPort: 8080
         readinessProbe:
